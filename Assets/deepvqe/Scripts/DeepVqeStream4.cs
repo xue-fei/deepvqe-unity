@@ -11,6 +11,9 @@ public class DeepVqeStream4 : IDisposable
     private const int N_FFT = 512;
     private const int HOP_LENGTH = 256;
     private const int WIN_LENGTH = 512;
+    /// <summary>
+    /// 257
+    /// </summary>
     private const int NUM_BINS = N_FFT / 2 + 1;
 
     private InferenceSession _session;
@@ -58,7 +61,7 @@ public class DeepVqeStream4 : IDisposable
         _inputMixTensor = new DenseTensor<float>(dimensions: new[] { 1, NUM_BINS, 1, 2 });
         InitializeCache();
 
-        // 音频缓冲区（模仿C的union，共享内存）
+        // 音频缓冲区 
         _audioBuffer.All = new float[N_FFT];
         _audioBuffer.Overlap = new ArraySegment<float>(_audioBuffer.All, 0, HOP_LENGTH);
         _audioBuffer.Input = new ArraySegment<float>(_audioBuffer.All, HOP_LENGTH, HOP_LENGTH);
@@ -67,12 +70,13 @@ public class DeepVqeStream4 : IDisposable
         // 重叠相加状态缓存
         _outFramesHop = new float[HOP_LENGTH];
 
-        // 窗函数（与C一致：window_div_nff = window / N_FFT）
+        // 窗函数 
         _window = CreateHannWindow(WIN_LENGTH);
         _windowDivNfft = new float[WIN_LENGTH];
         for (int i = 0; i < WIN_LENGTH; i++)
+        {
             _windowDivNfft[i] = _window[i] / N_FFT;
-
+        }
         // FFT/IFFT缓冲区
         _fftBuffer = new Complex[N_FFT];
         _ifftBuffer = new Complex[N_FFT];
@@ -130,7 +134,7 @@ public class DeepVqeStream4 : IDisposable
     {
         outputSamples = Array.Empty<float>();
         int numSamples = frameData.Length;
-        // 输入不足一帧（514样本）时缓存
+        // 输入不足一帧（256样本）时缓存
         if (numSamples + _inputBufferSize < HOP_LENGTH)
         {
             Array.Copy(frameData, 0,
@@ -145,7 +149,7 @@ public class DeepVqeStream4 : IDisposable
         int outputSize = numFrames * HOP_LENGTH;
         outputSamples = new float[outputSize];
 
-        // 复制上一次的重叠数据到输出（C的out_frames_hop）
+        // 复制上一次的重叠数据到输出 
         Array.Copy(_outFramesHop, outputSamples, HOP_LENGTH);
 
         int inputOffset = 0; // 输入数据处理偏移量
@@ -163,7 +167,7 @@ public class DeepVqeStream4 : IDisposable
                 inputOffset += copy;
             }
 
-            // 2. 准备STFT输入（overlap + input，共514样本）
+            // 2. 准备STFT输入（overlap + input，共512样本）
 
             Array.Copy(_audioBuffer.Overlap.Array, _audioBuffer.Overlap.Offset, stftInput, 0, HOP_LENGTH);
             Array.Copy(_audioBuffer.Input.Array, _audioBuffer.Input.Offset, stftInput, HOP_LENGTH, HOP_LENGTH);
@@ -173,7 +177,7 @@ public class DeepVqeStream4 : IDisposable
             {
                 stftInput[i] *= _window[i];
             }
-            // 3. 执行STFT（模仿C的kiss_fftr）
+            // 3. 执行STFT 
             stftResult = STFT(stftInput);
 
             // 4. 填充ONNX输入张量（实部+虚部）
@@ -199,16 +203,16 @@ public class DeepVqeStream4 : IDisposable
                 {
                     _cache[result.Name.Replace("_out", "")] = result.AsTensor<float>().ToDenseTensor();
                 }
-            } 
+            }
             // 7. 转换增强结果为复数频谱 
             for (int bin = 0; bin < NUM_BINS; bin++)
             {
                 enhSpectrum[bin] = new Complex(output[0, bin, 0, 0], output[0, bin, 0, 1]);
             }
-            // 8. 执行ISTFT（模仿C的kiss_fftri）
+            // 8. 执行ISTFT 
             istftOutput = ISTFT(enhSpectrum);
 
-            // 9. 重叠相加（严格对齐C逻辑）
+            // 9. 重叠相加 
             // 前256样本叠加到输出
             for (int i = 0; i < HOP_LENGTH; i++)
             {
@@ -233,9 +237,8 @@ public class DeepVqeStream4 : IDisposable
                 {
                     _outFramesHop[i] = istftOutput[HOP_LENGTH + i] * _windowDivNfft[HOP_LENGTH + i];
                 }
-            }
-
-            // 10. 更新overlap（将当前input移至overlap）
+            } 
+            //10.更新overlap（将当前input移至overlap）
             Array.Copy(_audioBuffer.Input.Array, _audioBuffer.Input.Offset,
                       _audioBuffer.Overlap.Array, _audioBuffer.Overlap.Offset,
                       HOP_LENGTH);
@@ -255,7 +258,7 @@ public class DeepVqeStream4 : IDisposable
     }
 
     /// <summary>
-    /// 创建Hann窗（带平方根，与C一致）
+    /// 创建Hann窗 
     /// </summary>
     private float[] CreateHannWindow(int length)
     {
@@ -269,7 +272,7 @@ public class DeepVqeStream4 : IDisposable
 
     Complex[] result = new Complex[NUM_BINS];
     /// <summary>
-    /// 执行STFT（模仿C的kiss_fftr）
+    /// 执行STFT 
     /// </summary>
     private Complex[] STFT(float[] input)
     {
@@ -288,7 +291,7 @@ public class DeepVqeStream4 : IDisposable
     }
 
     /// <summary>
-    /// FFT计算（模仿C的kiss_fft）
+    /// FFT计算 
     /// </summary>
     private void FFT(Complex[] buffer, int length)
     {
@@ -297,7 +300,7 @@ public class DeepVqeStream4 : IDisposable
 
     float[] result2 = new float[N_FFT];
     /// <summary>
-    /// 执行ISTFT（模仿C的kiss_fftri）
+    /// 执行ISTFT 
     /// </summary>
     private float[] ISTFT(Complex[] spectrum)
     {
@@ -307,7 +310,7 @@ public class DeepVqeStream4 : IDisposable
         {
             _ifftBuffer[N_FFT - i] = Complex.Conjugate(_ifftBuffer[i]);
         }
-        // 奈奎斯特分量强制为实数（C的kiss_fftri要求）
+        // 奈奎斯特分量强制为实数 
         if (N_FFT % 2 == 0)
         {
             _ifftBuffer[N_FFT / 2] = new Complex(_ifftBuffer[N_FFT / 2].Real, 0);
@@ -315,8 +318,7 @@ public class DeepVqeStream4 : IDisposable
         // 执行IFFT
         IFFT(_ifftBuffer, N_FFT);
 
-        // 提取实部（C的kiss_fftri输出为实部）
-
+        // 提取实部 
         for (int i = 0; i < N_FFT; i++)
         {
             result2[i] = (float)_ifftBuffer[i].Real;
@@ -329,7 +331,7 @@ public class DeepVqeStream4 : IDisposable
     /// </summary>
     private void IFFT(Complex[] buffer, int length)
     {
-        // 共轭后FFT等价于IFFT（未缩放，与C一致）
+        // 共轭后FFT等价于IFFT 
         for (int i = 0; i < length; i++)
         {
             buffer[i] = Complex.Conjugate(buffer[i]);
