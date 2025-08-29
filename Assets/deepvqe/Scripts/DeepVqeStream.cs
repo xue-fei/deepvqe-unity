@@ -70,8 +70,9 @@ public class DeepVqeStream : IDisposable
     {
         // 确保输入数据形状正确 (1, 257, 1, 2)
         if (frameData.Length != 514) // 257 * 2
+        {
             throw new ArgumentException("Frame data must have 514 elements");
-
+        }
         // 创建输入张量
         var inputTensor = new DenseTensor<float>(frameData, new[] { 1, 257, 1, 2 });
 
@@ -93,8 +94,9 @@ public class DeepVqeStream : IDisposable
             // 获取输出
             var output = results.FirstOrDefault(r => r.Name == "enh")?.AsTensor<float>();
             if (output == null)
+            {
                 throw new InvalidOperationException("No output named 'enh' found");
-
+            }
             // 更新缓存
             foreach (var result in results)
             {

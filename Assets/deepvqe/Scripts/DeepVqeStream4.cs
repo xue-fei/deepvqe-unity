@@ -146,6 +146,7 @@ public class DeepVqeStream4 : IDisposable
         // 计算可处理的帧数
         int totalAvailable = numSamples + _inputBufferSize;
         int numFrames = totalAvailable / HOP_LENGTH;
+        UnityEngine.Debug.Log("numFrames:" + numFrames);
         int outputSize = numFrames * HOP_LENGTH;
         outputSamples = new float[outputSize];
 
@@ -254,6 +255,7 @@ public class DeepVqeStream4 : IDisposable
                       remaining);
             _inputBufferSize += remaining;
         }
+        UnityEngine.Debug.Log("处理完毕");
         return outputSize;
     }
 
