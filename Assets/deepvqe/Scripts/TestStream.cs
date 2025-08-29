@@ -11,23 +11,23 @@ public class TestStream : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        deepVqeStream = new DeepVqeStream(Application.streamingAssetsPath + "/deepvqe_simple.onnx");
+        deepVqeStream = new DeepVqeStream(Application.streamingAssetsPath + "/deepvqe.onnx");
 
         ogFloats = Util.ReadWav(Application.dataPath + "/test.wav");
 
-        Loom.RunAsync(() =>
-        {
+        //Loom.RunAsync(() =>
+        //{
             int frameSize = 514;
             for (int i = 0; i < ogFloats.Length; i += frameSize)
             {
                 int remaining = ogFloats.Length - i;
                 int currentFrameSize = remaining < frameSize ? remaining : frameSize;
-                float[] frame = new float[currentFrameSize];
+                float[] frame = new float[frameSize];
                 Array.Copy(ogFloats, i, frame, 0, currentFrameSize);
                 float[] processedFrame = deepVqeStream.ProcessFrame(frame);
                 destList.AddRange(processedFrame);
             }
-        });
+        //});
     }
     // Update is called once per frame
     void Update()
