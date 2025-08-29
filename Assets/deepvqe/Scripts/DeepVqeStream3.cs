@@ -73,7 +73,7 @@ public class DeepVqeStream3 : IDisposable
         }
         return window;
     }
-      
+
     /// <summary>
     /// 短时傅里叶变换(STFT)
     /// </summary>
@@ -183,13 +183,13 @@ public class DeepVqeStream3 : IDisposable
     /// 处理音频文件
     /// </summary>
     public float[] ProcessFrame(float[] frameData)
-    { 
+    {
         // 计算STFT
         var (stftData, numFrames) = Stft(frameData);
         int numFreqs = stftData.GetLength(0);
 
         // 准备模型输入 (B=1, F=257, T, 2)
-        float[] inputData = new float[1 * numFreqs * numFrames * 2]; 
+        float[] inputData = new float[1 * numFreqs * numFrames * 2];
         for (int t = 0; t < numFrames; t++)
         {
             for (int f = 0; f < numFreqs; f++)
@@ -221,6 +221,15 @@ public class DeepVqeStream3 : IDisposable
             // 获取输出张量
             var outputTensor = outputs.First().AsTensor<float>();
 
+            // 更新缓存
+            foreach (var result in outputs)
+            {
+                if (result.Name.EndsWith("_out") && _cache.ContainsKey(result.Name.Replace("_out", "")))
+                {
+                    _cache[result.Name.Replace("_out", "")] = result.AsTensor<float>().ToDenseTensor();
+                }
+            }
+
             // 转换回复数形式的STFT结果
             var enhancedStft = new Complex[numFreqs, numFrames];
             for (int t = 0; t < numFrames; t++)
@@ -236,7 +245,7 @@ public class DeepVqeStream3 : IDisposable
 
             //执行逆STFT变换
             float[] enhancedAudio = Istft(enhancedStft, frameData.Length);
-            return enhancedAudio; 
+            return enhancedAudio;
         }
     }
 

@@ -88,6 +88,15 @@ public class DeepVqeStream2 : IDisposable
             if (output == null)
                 throw new InvalidOperationException("No output named 'enh' found");
 
+            // 更新缓存
+            foreach (var result in results)
+            {
+                if (result.Name.EndsWith("_out") && _cache.ContainsKey(result.Name.Replace("_out", "")))
+                {
+                    _cache[result.Name.Replace("_out", "")] = result.AsTensor<float>().ToDenseTensor();
+                }
+            }
+
             // 提取输出并转换为复数
             enhancedStft = new Complex[numFrames, numBins];
 

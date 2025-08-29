@@ -99,7 +99,7 @@ public class DeepVqeStream : IDisposable
             foreach (var result in results)
             {
                 if (result.Name.EndsWith("_out") && _cache.ContainsKey(result.Name.Replace("_out", "")))
-                {
+                { 
                     _cache[result.Name.Replace("_out", "")] = result.AsTensor<float>().ToDenseTensor();
                 }
             }
